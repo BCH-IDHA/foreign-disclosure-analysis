@@ -24,18 +24,24 @@ load_dotenv()
 
 # Azure OpenAI configuration
 try:
-    # Try to initialize the Azure OpenAI client
-    client = AzureOpenAI(
-        azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION")
-    )
-    logger.info("Successfully initialized Azure OpenAI client")
+    # Check if all required environment variables are set
+    if (os.getenv("AZURE_OPENAI_API_ENDPOINT") and 
+        os.getenv("AZURE_OPENAI_API_KEY") and 
+        os.getenv("AZURE_OPENAI_API_VERSION")):
+        
+        client = AzureOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION")
+        )
+        logger.info("Successfully initialized Azure OpenAI client")
+    else:
+        logger.error("Missing required Azure OpenAI environment variables")
+        raise ValueError("Missing required Azure OpenAI environment variables. Please check your .env file.")
 except Exception as e:
-    # If there's an error, use a mock client for development/testing
-    logger.warning(f"Error initializing Azure OpenAI client: {str(e)}")
-    logger.warning("Using mock Azure OpenAI client for development/testing")
-    client = None
+    # If there's an error, log it and re-raise
+    logger.error(f"Error initializing Azure OpenAI client: {str(e)}")
+    raise ValueError(f"Failed to initialize Azure OpenAI client: {str(e)}")
 
 # Constants
 COUNTRIES_OF_CONCERN = ["Russia", "North Korea", "Iran", "China"]
@@ -139,126 +145,46 @@ def analyze_foreign_affiliations(publication_data):
     Returns a dictionary containing analysis results.
     """
     try:
-        # If we have a real client, use it
-        if client:
-            prompt = f"""
-            Analyze the following publication metadata for foreign affiliations and collaborations,
-            particularly focusing on Russia, North Korea, Iran, and China.
+        # Check if the Azure OpenAI client is available
+        if client is None:
+            # If client is not available, raise an exception
+            raise ValueError("Azure OpenAI client is not available. Please check your API credentials.")
+            
+        prompt = f"""
+        Analyze the following publication metadata for foreign affiliations and collaborations,
+        particularly focusing on Russia, North Korea, Iran, and China.
 
-            Title: {publication_data.get('title', '')}
-            Authors and Affiliations: {publication_data.get('affiliations', '')}
-            Abstract: {publication_data.get('abstract', '')}
-            Funding Information: {publication_data.get('funding_info', '')}
+        Title: {publication_data.get('title', '')}
+        Authors and Affiliations: {publication_data.get('affiliations', '')}
+        Abstract: {publication_data.get('abstract', '')}
+        Funding Information: {publication_data.get('funding_info', '')}
 
-            Please provide a JSON response with the following information:
-            1. List of all foreign countries mentioned or implied
-            2. Foreign institutions involved
-            3. Any foreign funding sources identified
-            4. Confidence score (1-10) regarding foreign involvement
-            5. Detailed explanation for the confidence score
-            """
+        Please provide a JSON response with the following information:
+        1. List of all foreign countries mentioned or implied
+        2. Foreign institutions involved
+        3. Any foreign funding sources identified
+        4. Confidence score (1-10) regarding foreign involvement
+        5. Detailed explanation for the confidence score
+        """
 
-            response = client.chat.completions.create(
-                model=MODEL_DEPLOYMENT,
-                messages=[
-                    {"role": "system", "content": "You are an expert in analyzing scientific publications for foreign affiliations and collaborations."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.2,
-                max_tokens=1000,
-                response_format={"type": "json_object"}
-            )
+        response = client.chat.completions.create(
+            model=MODEL_DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": "You are an expert in analyzing scientific publications for foreign affiliations and collaborations."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=1000,
+            response_format={"type": "json_object"}
+        )
 
-            result = json.loads(response.choices[0].message.content)
-            logger.info("Successfully analyzed publication for foreign affiliations")
-            return result
-        else:
-            # Use mock analysis for development/testing
-            return mock_analyze_foreign_affiliations(publication_data)
+        result = json.loads(response.choices[0].message.content)
+        logger.info("Successfully analyzed publication for foreign affiliations")
+        return result
     except Exception as e:
         logger.error(f"Error analyzing foreign affiliations: {str(e)}")
-        # Fallback to mock analysis
-        return mock_analyze_foreign_affiliations(publication_data)
-
-def mock_analyze_foreign_affiliations(publication_data):
-    """
-    Mock implementation of foreign affiliation analysis for development and testing.
-    
-    Args:
-        publication_data: Publication data dictionary
-        
-    Returns:
-        Dictionary containing mock analysis results
-    """
-    logger.info("Using mock analysis for foreign affiliations")
-    
-    title = publication_data.get('title', '').lower()
-    affiliations = publication_data.get('affiliations', '').lower()
-    abstract = publication_data.get('abstract', '').lower()
-    funding = publication_data.get('funding_info', '').lower()
-    
-    # Initialize result
-    result = {
-        'countries': [],
-        'institutions': [],
-        'funding_sources': [],
-        'confidence_score': 1,
-        'explanation': 'Mock analysis based on keyword matching.'
-    }
-    
-    # Check for countries of concern
-    countries_found = set()
-    for country in COUNTRIES_OF_CONCERN:
-        if country.lower() in title or country.lower() in affiliations or country.lower() in abstract or country.lower() in funding:
-            countries_found.add(country)
-    
-    # Add other common countries
-    for country in ['UK', 'United Kingdom', 'England', 'France', 'Germany', 'Japan', 'Canada', 'Australia', 'Spain', 'Italy']:
-        if country.lower() in title or country.lower() in affiliations or country.lower() in abstract or country.lower() in funding:
-            countries_found.add(country)
-    
-    # Extract institutions based on keywords
-    institutions = []
-    if 'university' in affiliations:
-        institutions.append('University mentioned in affiliations')
-    if 'hospital' in affiliations:
-        institutions.append('Hospital mentioned in affiliations')
-    if 'institute' in affiliations:
-        institutions.append('Research Institute mentioned in affiliations')
-    
-    # Extract funding sources based on keywords
-    funding_sources = []
-    if 'grant' in funding:
-        funding_sources.append('Grant mentioned in funding info')
-    if 'nih' in funding or 'national institutes of health' in funding:
-        funding_sources.append('NIH funding mentioned')
-    if 'foundation' in funding:
-        funding_sources.append('Foundation funding mentioned')
-    
-    # Calculate confidence score based on findings
-    confidence_score = 1
-    if countries_found:
-        confidence_score += 3
-    if any(country in countries_found for country in COUNTRIES_OF_CONCERN):
-        confidence_score += 2
-    if institutions:
-        confidence_score += 1
-    if funding_sources:
-        confidence_score += 1
-    if 'international' in abstract or 'collaboration' in abstract:
-        confidence_score += 1
-    
-    # Cap at 10
-    confidence_score = min(confidence_score, 10)
-    
-    # Update result
-    result['countries'] = list(countries_found)
-    result['institutions'] = institutions
-    result['funding_sources'] = funding_sources
-    result['confidence_score'] = confidence_score
-    result['explanation'] = f"Mock analysis found {len(countries_found)} countries, {len(institutions)} institutions, and {len(funding_sources)} funding sources."
-    
-    return result
+        # Propagate the error instead of using simulated analysis
+        raise e
 
 def generate_output_row(researcher, publication, analysis):
     """

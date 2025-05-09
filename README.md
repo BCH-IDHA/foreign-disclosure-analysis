@@ -196,12 +196,10 @@ classDiagram
         +process_pubmed_results()
         +extract_affiliations()
         +extract_funding_info()
-        +get_mock_pubmed_data()
     }
 
     class UseMCPTool {
         +use_mcp_tool()
-        +mock_pubmed_search()
     }
 
     class AzureOpenAI {
@@ -215,23 +213,15 @@ classDiagram
 
 ## Development
 
-For development and testing purposes, the code includes mock implementations of the PubMed search functionality and Azure OpenAI API. This allows for testing without actual API access.
+This application requires access to both the Azure OpenAI API and the Clinical Research MCP Server. It will not run in a simulated or mock mode. If either service is unavailable, the application will fail with appropriate error messages.
 
-### Mock Implementation Flow
+### Requirements
 
-```mermaid
-flowchart TD
-    A[Start] --> B{Azure OpenAI Client Available?}
-    B -->|Yes| C[Use Azure OpenAI API]
-    B -->|No| D[Use Mock Analysis]
-    C --> E{API Call Successful?}
-    E -->|Yes| F[Return API Results]
-    E -->|No| D
-    D --> G[Generate Mock Results]
-    G --> H[Return Mock Results]
-    F --> I[End]
-    H --> I
-```
+1. Valid Azure OpenAI API credentials configured in the .env file
+2. Access to the Clinical Research MCP Server
+3. Proper network connectivity to both services
+
+The application performs strict validation of these requirements and will not proceed if they are not met.
 
 ## License
 

@@ -61,8 +61,8 @@ def use_pubmed_search(params: Dict[str, Any]) -> List[Dict[str, Any]]:
         
     except Exception as e:
         logger.error(f"Error in PubMed search: {str(e)}")
-        # For development/testing, return mock data if the MCP server is not available
-        return get_mock_pubmed_data(params.get('query', ''))
+        # Propagate the error instead of returning an empty list
+        raise e
 
 def process_pubmed_results(result: Any) -> List[Dict[str, Any]]:
     """
@@ -163,76 +163,6 @@ def extract_funding_info(publication: Dict[str, Any]) -> str:
     
     return '; '.join(filter(None, funding_info))
 
-def get_mock_pubmed_data(query: str) -> List[Dict[str, Any]]:
-    """
-    Generate mock PubMed data for development and testing.
-    
-    Args:
-        query: Search query
-        
-    Returns:
-        List of mock publication dictionaries
-    """
-    logger.warning("Using mock PubMed data for development/testing")
-    
-    # Extract researcher name from query if possible
-    researcher_name = query.split('[Author]')[0].strip() if '[Author]' in query else "Researcher"
-    
-    # Create mock publications
-    mock_publications = [
-        {
-            'title': 'Novel Therapeutic Approaches for Pediatric Autoimmune Disorders',
-            'authors': [
-                {'name': researcher_name, 'affiliation': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA'},
-                {'name': 'Wang, Li', 'affiliation': 'Beijing Children\'s Hospital, Capital Medical University, Beijing, China'}
-            ],
-            'journal': 'Journal of Pediatric Immunology',
-            'publication_date': '2024-03-15',
-            'abstract': 'This study explores novel therapeutic approaches for pediatric autoimmune disorders, with a focus on targeted immunomodulation. Our international collaboration identified several promising treatment pathways.',
-            'doi': '10.1234/jpimmunol.2024.0123',
-            'pmid': '36789012',
-            'affiliations': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA; Beijing Children\'s Hospital, Capital Medical University, Beijing, China',
-            'funding_info': 'NIH Grant R01-AI123456; National Natural Science Foundation of China (Grant No. 82071754)',
-            'keywords': ['pediatric', 'autoimmune', 'immunotherapy', 'international collaboration'],
-            'url': 'https://pubmed.ncbi.nlm.nih.gov/36789012/'
-        },
-        {
-            'title': 'Genetic Basis of Rare Congenital Heart Defects: A Multi-Center Study',
-            'authors': [
-                {'name': researcher_name, 'affiliation': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA'},
-                {'name': 'Petrov, Mikhail', 'affiliation': 'National Medical Research Center, Moscow, Russia'},
-                {'name': 'Smith, John', 'affiliation': 'Great Ormond Street Hospital, London, UK'}
-            ],
-            'journal': 'Pediatric Cardiology',
-            'publication_date': '2023-11-22',
-            'abstract': 'This multi-center study investigates the genetic basis of rare congenital heart defects across diverse populations. We identified several novel genetic variants associated with specific cardiac malformations.',
-            'doi': '10.1234/pedcard.2023.5678',
-            'pmid': '35678901',
-            'affiliations': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA; National Medical Research Center, Moscow, Russia; Great Ormond Street Hospital, London, UK',
-            'funding_info': 'American Heart Association Grant AHA-CHD-2023; Russian Science Foundation Grant 21-15-00123',
-            'keywords': ['congenital heart defects', 'genetics', 'pediatric', 'international collaboration'],
-            'url': 'https://pubmed.ncbi.nlm.nih.gov/35678901/'
-        },
-        {
-            'title': 'Advances in Pediatric Neuroimaging Techniques',
-            'authors': [
-                {'name': researcher_name, 'affiliation': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA'},
-                {'name': 'Johnson, Emily', 'affiliation': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA'}
-            ],
-            'journal': 'Journal of Pediatric Neurology',
-            'publication_date': '2024-01-30',
-            'abstract': 'This review discusses recent advances in pediatric neuroimaging techniques and their clinical applications. We highlight innovations in MRI protocols specifically designed for pediatric patients.',
-            'doi': '10.1234/jpedneurol.2024.9012',
-            'pmid': '34567890',
-            'affiliations': 'Boston Children\'s Hospital, Harvard Medical School, Boston, MA, USA',
-            'funding_info': 'NIH Grant R01-NS654321',
-            'keywords': ['neuroimaging', 'pediatric', 'MRI', 'clinical applications'],
-            'url': 'https://pubmed.ncbi.nlm.nih.gov/34567890/'
-        }
-    ]
-    
-    return mock_publications
-
 def use_clinical_trials_search(params: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Search ClinicalTrials.gov for information about clinical studies.
@@ -259,7 +189,7 @@ def use_clinical_trials_search(params: Dict[str, Any]) -> List[Dict[str, Any]]:
         
     except Exception as e:
         logger.error(f"Error in clinical trials search: {str(e)}")
-        return []
+        raise e
 
 def use_fda_drug_search(params: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
@@ -287,4 +217,4 @@ def use_fda_drug_search(params: Dict[str, Any]) -> List[Dict[str, Any]]:
         
     except Exception as e:
         logger.error(f"Error in FDA drug search: {str(e)}")
-        return []
+        raise e
