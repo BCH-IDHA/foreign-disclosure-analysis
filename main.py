@@ -29,11 +29,13 @@ try:
         os.getenv("AZURE_OPENAI_API_KEY") and 
         os.getenv("AZURE_OPENAI_API_VERSION")):
         
+        # Initialize the Azure OpenAI client with required parameters
         client = AzureOpenAI(
             azure_endpoint=os.getenv("AZURE_OPENAI_API_ENDPOINT"),
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             api_version=os.getenv("AZURE_OPENAI_API_VERSION")
         )
+        
         logger.info("Successfully initialized Azure OpenAI client")
     else:
         logger.error("Missing required Azure OpenAI environment variables")
@@ -167,6 +169,7 @@ def analyze_foreign_affiliations(publication_data):
         5. Detailed explanation for the confidence score
         """
 
+        # Use the latest OpenAI API format
         response = client.chat.completions.create(
             model=MODEL_DEPLOYMENT,
             messages=[
